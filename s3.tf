@@ -1,21 +1,30 @@
 resource "aws_s3_bucket" "main" {
   provider = aws.main
-  bucket   = var.fqdn
+  bucket   = var.bucket_name
   acl      = "private"
   policy   = data.aws_iam_policy_document.bucket_policy.json
 
   website {
     index_document = var.index_document
     error_document = var.error_document
-    routing_rules  = var.routing_rules
-  }
+    routing_rules = <<EOF
+    [{
+    "Condition": {
+        "KeyPrefixEquals": "docs/"
+    },
+    "Redirect": {
+        "ReplaceKeyPrefixWith": "documents/"
+    }
+    }]
+     EOF
+   }
 
   force_destroy = var.force_destroy
 
   tags = merge(
     var.tags,
     {
-      "Name" = var.fqdn
+      "Name" = var.bucket_name
     },
   )
 }
@@ -31,7 +40,7 @@ data "aws_iam_policy_document" "bucket_policy" {
     ]
 
     resources = [
-      "arn:aws:s3:::${var.fqdn}/*",
+      "arn:aws:s3:::${var.bucket_name}/*",
     ]
 
     condition {
@@ -55,7 +64,7 @@ data "aws_iam_policy_document" "bucket_policy" {
     ]
 
     resources = [
-      "arn:aws:s3:::${var.fqdn}/*",
+      "arn:aws:s3:::${var.bucket_name}/*",
     ]
 
     condition {
@@ -73,4 +82,3 @@ data "aws_iam_policy_document" "bucket_policy" {
     }
   }
 }
-

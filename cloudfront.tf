@@ -1,19 +1,17 @@
 resource "aws_cloudfront_distribution" "main" {
-  count = var.lambda_edge_enabled ? 0 : 1
-
-  is_ipv6_enabled = var.cf_ipv6_enabled
-
-  provider     = aws.cloudfront
-  http_version = "http2"
+  count              = var.lambda_edge_enabled ? 0 : 1
+  is_ipv6_enabled    = var.cf_ipv6_enabled
+  provider           = aws.cloudfront
+  http_version       = "http2"
 
   origin {
-    origin_id   = "origin-${var.fqdn}"
-    domain_name = aws_s3_bucket.main.website_endpoint
+    origin_id        = "origin-${var.bucket_name}"
+    domain_name      = aws_s3_bucket.main.website_endpoint
     custom_origin_config {
       origin_protocol_policy = "http-only"
-      http_port  = "80"
-      https_port = "443"
-      origin_ssl_protocols = ["TLSv1.2"]
+      http_port              = "80"
+      https_port             = "443"
+      origin_ssl_protocols   = ["TLSv1.2"]
     }
     custom_header {
       name  = "User-Agent"
@@ -21,8 +19,8 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
 
-  enabled             = true
-  default_root_object = var.index_document
+  enabled                    = true
+  default_root_object        = var.index_document
 
   custom_error_response {
     error_code            = "404"
@@ -31,21 +29,21 @@ resource "aws_cloudfront_distribution" "main" {
     response_page_path    = "/${var.single_page_application ? var.index_document : var.error_document}"
   }
 
-  aliases = concat([var.fqdn], var.aliases)
+  aliases      = concat([var.bucket_name], var.aliases)
 
-  price_class = var.cloudfront_price_class
+  price_class  = var.cloudfront_price_class
 
   default_cache_behavior {
-    target_origin_id = "origin-${var.fqdn}"
+    target_origin_id = "origin-${var.bucket_name}"
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
     compress         = true
 
     forwarded_values {
-      query_string = false
+      query_string   = false
 
       cookies {
-        forward = "none"
+        forward      = "none"
       }
     }
 
@@ -68,22 +66,17 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   web_acl_id = var.web_acl_id
-
-//  is_ipv6_enabled (Optional) - Whether the IPv6 is enabled for the distribution.
-
 }
 
 resource "aws_cloudfront_distribution" "main-lambda-edge" {
-  count = var.lambda_edge_enabled ? 1 : 0
-
-  is_ipv6_enabled = var.cf_ipv6_enabled
-
-  provider     = aws.cloudfront
-  http_version = "http2"
+  count              = var.lambda_edge_enabled ? 1 : 0
+  is_ipv6_enabled    = var.cf_ipv6_enabled
+  provider           = aws.cloudfront
+  http_version       = "http2"
 
   origin {
-    origin_id = "origin-${var.fqdn}"
-    domain_name = aws_s3_bucket.main.website_endpoint
+    origin_id        = "origin-${var.bucket_name}"
+    domain_name      = aws_s3_bucket.main.website_endpoint
     custom_origin_config {
       origin_protocol_policy = "http-only"
       http_port              = "80"
@@ -106,12 +99,11 @@ resource "aws_cloudfront_distribution" "main-lambda-edge" {
     response_page_path    = "/${var.single_page_application ? var.index_document : var.error_document}"
   }
 
-  aliases = concat([var.fqdn], var.aliases)
-
-  price_class = "PriceClass_100"
+  aliases             = concat([var.bucket_name], var.aliases)
+  price_class         = "PriceClass_100"
 
   default_cache_behavior {
-    target_origin_id = "origin-${var.fqdn}"
+    target_origin_id = "origin-${var.bucket_name}"
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
     compress         = true
