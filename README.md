@@ -24,6 +24,7 @@ A reusable Terraform module to deploy a static website using Amazon S3 and Cloud
 ___
 
 ## Architecture
+![SQS](https://github.com/user-attachments/assets/ce81d6d6-e389-4572-b604-4a386c845a5e)
 
 
 
