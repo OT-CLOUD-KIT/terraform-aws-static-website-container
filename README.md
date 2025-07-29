@@ -1,167 +1,114 @@
-# static_website_container
+## Static Container
 
-[![Opstree Solutions][opstree_avatar]][opstree_homepage]<br/>[Opstree Solutions][opstree_homepage] 
+A reusable Terraform module to deploy a static website using Amazon S3 and CloudFront, optionally protected via custom headers and secured with AWS WAF and ACM SSL certificates
 
-  [opstree_homepage]: https://opstree.github.io/
-  [opstree_avatar]: https://img.cloudposse.com/150x150/https://github.com/opstree.png
+## Features
 
-- This repository contains a terraform module for hosting Static website with AWS S3 and cloudfront.
-- This project is a part of opstree's ot-aws initiative for terraform modules.
+- Creates an S3 bucket configured for static website hosting
+
+- Adds index.html and error.html configuration
+
+- Applies public access controls based on IP/User-Agent
+
+- Sets up CloudFront distribution with optional SSL
+
+
+
+## Providers
+
+| Name                                              | Version  |
+|---------------------------------------------------|----------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.82.2   |
+| <a name="terraform_module"></a> [Terraform](Terraform\module) | >= 1.12.1|
+
+___
+
+## Architecture
+
+
 
 ## Usage
 
-```sh
-$   cat main.tf
-/*-------------------------------------------------------*/
-module "s3_website" {
-  source                 = "../"
-  bucket_name            = var.bucket_name
-  ssl_certificate_arn    = aws_acm_certificate_validation.cert.certificate_arn
-  allowed_ips            = var.allowed_ips
-  index_document         = "index.html"
-  error_document         = "error.html"
-  force_destroy          = "true"
-  cloudfront_price_class = "PriceClass_200"
-  providers = {
-    aws.main             = aws.main
-    aws.cloudfront       = aws.cloudfront
-  }
-  #web_acl_id = data.terraform_remote_state.site.waf-web-acl-id
+```hcl
+
+module "static_site" {
+  source = "OT-CLOUD-KIT/terraform-aws-static-website-container"
+
+  bucket_name             = "static-site-bucket"
+  aliases                 = []
+  force_destroy           = true
+  ssl_certificate_arn     = ""
+  allowed_ips             = []
+  region                  = "us-east-1"
+  web_acl_id              = ""
+  refer_secret            = "custom-user-agent"
+  cloudfront_price_class  = "PriceClass_100"
+  index_document          = "index.html"
+  error_document          = "error.html"
+  error_response_code     = "404"
+  spa_error_response_code = "200"
+  
+  lambda_edge_enabled     = false
+  cf_ipv6_enabled         = true
+  single_page_application = true
 }
 
-# ACM Certificate generation
-resource "aws_acm_certificate" "cert" {
-  provider                = aws.cloudfront
-  domain_name             = var.bucket_name
-  validation_method       = "DNS"
-}
 
-resource "aws_route53_record" "cert_validation" {
-  provider                = aws.cloudfront
-  name                    = aws_acm_certificate.cert.domain_validation_options.0.resource_record_name
-  type                    = aws_acm_certificate.cert.domain_validation_options.0.resource_record_type
-  zone_id                 = data.aws_route53_zone.main.id
-  records                 = [aws_acm_certificate.cert.domain_validation_options.0.resource_record_value]
-  ttl                     = 60
-}
-
-resource "aws_acm_certificate_validation" "cert" {
-  provider                = aws.cloudfront
-  certificate_arn         = aws_acm_certificate.cert.arn
-  validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
-}
-
-# Route 53 record for the static site
-data "aws_route53_zone" "main" {
-  provider                = aws.main
-  name                    = var.domain
-  private_zone            = false
-}
-
-resource "aws_route53_record" "web" {
-  provider                 = aws.main
-  zone_id                  = data.aws_route53_zone.main.zone_id
-  name                     = var.bucket_name
-  type                     = "A"
-
-  alias {
-    name                   = module.s3_website.cf_domain_name
-    zone_id                = module.s3_website.cf_hosted_zone_id
-    evaluate_target_health = false
-  }
-}
-
-/*-------------------------------------------------------*/
-```
-```sh
-$   cat variable.tf
-/*-------------------------------------------------------*/
-# AWS Region for S3 and other resources
-provider "aws" {
-  region = "us-east-1"
-  alias = "main"
-}
-
-# AWS Region for Cloudfront
-provider "aws" {
-  region = "us-east-1"
-  alias = "cloudfront"
-}
-
-###### S3 bucket name
-variable "bucket_name" {
-  default     = "opstree.shwetaopstree.tk"
-}
-####### domain name
-variable "domain" {
-  description = "The domain name."
-  default     = "shwetaopstree.tk"
-}
-
-###Allowed IPs that can directly access the S3 bucket
-variable "allowed_ips" {
-  type = list
-  default = [
-    "0.0.0.0/0"            # public access
-  ]
-}
-/*-------------------------------------------------------*/
 ```
 
-```sh
-$   cat output.tf
-/*-------------------------------------------------------*/
-output "s3_bucket_id" {
-  value = module.s3_website.s3_bucket_id
-}
-output "s3_bucket_arn" {
-  value = module.s3_website.s3_bucket_arn
-}
-output "s3_domain" {
-  value = module.s3_website.s3_website_endpoint
-}
-output "s3_hosted_zone_id" {
-  value = module.s3_website.s3_hosted_zone_id
-}
-output "cloudfront_domain" {
-  value = module.s3_website.cf_domain_name
-}
-output "acm_certificate_arn" {
-  value = aws_acm_certificate_validation.cert.certificate_arn
-}
-/*-------------------------------------------------------*/
-```
+
+## Resources
+
+
+| Name | Description |
+|------|-------------|
+| <a name="aws_s3_bucket_main"></a> [aws\_s3\_bucket.main](#aws_s3_bucket_main) | Creates the main S3 bucket for static website hosting |
+| <a name="aws_s3_bucket_website_configuration_main"></a> [aws\_s3\_bucket\_website\_configuration.main](#aws_s3_bucket_website_configuration_main) | Configures the S3 bucket for static website hosting with index and error documents |
+| <a name="aws_s3_bucket_public_access_block_s3_access_block"></a> [aws\_s3\_bucket\_public\_access\_block.s3\_access\_block](#aws_s3_bucket_public_access_block_s3_access_block) | Controls public access to the S3 bucket |
+| <a name="aws_s3_bucket_policy_bucket"></a> [aws\_s3\_bucket\_policy.bucket](#aws_s3_bucket_policy_bucket) | Bucket policy allowing read access from specific IPs and CloudFront user-agent |
+| <a name="data_aws_iam_policy_document_bucket_policy"></a> [data\_aws\_iam\_policy\_document.bucket\_policy](#data_aws_iam_policy_document_bucket_policy) | IAM policy document used for the S3 bucket policy |
+| <a name="aws_cloudfront_distribution_main"></a> [aws\_cloudfront\_distribution.main](#aws_cloudfront_distribution_main) | Creates a CloudFront distribution pointing to the S3 website endpoint |
+
+
+
+
+
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|:----:|:-----:|:-----:|
-| bucket_name | The bucket_name of the name of the website and also name of the S3 bucket. | `string` | `null` | yes |
-| domain | The domain name. | `string` | `null` | yes |
-| allowed_ips | A list of IPs that can access the S3 bucket directly. | `string` | `null` | yes |
+|------|-------------|------|---------|:--------:|
+| <a name="input_bucket_name"></a> [bucket_name](#input_bucket_name) | Name of the S3 bucket to host the static website | `string` | `"static-site-bucket"` | yes |
+| <a name="input_aliases"></a> [aliases](#input_aliases) | Additional domain names for the CloudFront distribution | `list(string)` | `[]` | no |
+| <a name="input_force_destroy"></a> [force_destroy](#input_force_destroy) | Whether to forcefully delete the bucket even if it contains objects | `bool` | `true` | no |
+| <a name="input_ssl_certificate_arn"></a> [ssl_certificate_arn](#input_ssl_certificate_arn) | ARN of the ACM SSL certificate for HTTPS support | `string` | `""` | no |
+| <a name="input_allowed_ips"></a> [allowed_ips](#input_allowed_ips) | List of IPs allowed to access the site (optional IP restriction) | `list(string)` | `[]` | no |
+| <a name="input_web_acl_id"></a> [web_acl_id](#input_web_acl_id) | AWS WAF Web ACL ID to associate with CloudFront | `string` | `""` | no |
+| <a name="input_refer_secret"></a> [refer_secret](#input_refer_secret) | Custom user-agent or header for request validation | `string` | `"custom-user-agent"` | no |
+| <a name="input_cloudfront_price_class"></a> [cloudfront_price_class](#input_cloudfront_price_class) | Price class for CloudFront (e.g., PriceClass_100) | `string` | `"PriceClass_100"` | no |
+| <a name="input_index_document"></a> [index_document](#input_index_document) | Default document for S3 static website hosting | `string` | `"index.html"` | no |
+| <a name="input_error_document"></a> [error_document](#input_error_document) | Custom error page for S3 static hosting | `string` | `"error.html"` | no |
+| <a name="input_error_response_code"></a> [error_response_code](#input_error_response_code) | HTTP error response code (e.g., 404) | `string` | `"404"` | no |
+| <a name="input_spa_error_response_code"></a> [spa_error_response_code](#input_spa_error_response_code) | Response code for SPA fallback errors | `string` | `"200"` | no |
+| <a name="input_random_alphanumeric_len"></a> [random_alphanumeric_len](#input_random_alphanumeric_len) | Length of random suffix used for naming | `number` | `4` | no |
 
+
+
+
+___
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| id | The identifier for the distribution. For example: EDFDVBD632BHDS5. |
-| arn | The ARN (Amazon Resource Name) for the distribution. |
-| domain_name | The domain name corresponding to the distribution |
+| <a name="output_bucket_name"></a> [bucket_name](#output_bucket_name) | Name of the created S3 bucket used for static website hosting |
+| <a name="output_website_url"></a> [website_url](#output_website_url) | Public URL of the static website hosted on the S3 bucket |
+| <a name="output_cloudfront_domain_name"></a> [cloudfront_domain_name](#output_cloudfront_domain_name) | Domain name of the CloudFront distribution (if created) |
 
-## Related Projects
 
-Check out these related projects.
+___
 
-- [network_skeleton](https://gitlab.com/ot-aws/terrafrom_v0.12.21/network_skeleton) - Terraform module for providing a general purpose Networking solution
-- [security_group](https://gitlab.com/ot-aws/terrafrom_v0.12.21/security_group) - Terraform module for creating dynamic Security groups
-- [eks](https://gitlab.com/ot-aws/terrafrom_v0.12.21/eks) - Terraform module for creating elastic kubernetes cluster.
-- [HA_ec2_alb](https://gitlab.com/ot-aws/terrafrom_v0.12.21/ha_ec2_alb.git) - Terraform module for creating a Highly available setup of an EC2 instance with quick disater recovery.
-- [HA_ec2](https://gitlab.com/ot-aws/terrafrom_v0.12.21/ha_ec2.git) - Terraform module for creating a Highly available setup of an EC2 instance with quick disater recovery.
-- [rolling_deployment](https://gitlab.com/ot-aws/terrafrom_v0.12.21/rolling_deployment.git) - This terraform module will orchestrate rolling deployment.
+## Contributors
 
-### Contributors
+- [Piyush Upadhyay](https://github.com/piiiyuushh)
+- [Nikita Joshi](https://github.com/jnikita19)
 
-[![Shweta Tyagi][shweta_avatar]][shweta_homepage]<br/>[Shweta Tyagi][shweta_homepage] 
-
-  [shweta_homepage]: https://github.com/shwetatyagi-ot
-  [shweta_avatar]: https://img.cloudposse.com/75x75/https://github.com/shwetatyagi-ot.png
