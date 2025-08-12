@@ -19,7 +19,7 @@ module "naming" {
 
 
 module "static_site" {
-  source = "../"
+  source = "git@github.com:OT-CLOUD-KIT/terraform-aws-static-website-container.git?ref=Feature"
   bucket_name             = var.bucket_name
   aliases                 = var.aliases
   force_destroy           = var.force_destroy
