@@ -13,19 +13,6 @@ spa_error_response_code = "200"
 
 
 
-random_alphanumeric_len = 4
-
-bu       = "ot"
-app      = "bp"
-env      = "d"
-resource = "static_container"
-tenant   = ""
-
-special = false
-upper   = false
-number  = true
-
-gen_no_of_names = 1
-
-team    = "infra"
-program = "ot"
+env = "dev"
+owner = "opstree"
+app = "otcloud-kit"
