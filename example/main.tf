@@ -1,0 +1,21 @@
+module "static_site" {
+  source = "git@github.com:OT-CLOUD-KIT/terraform-aws-static-website-container.git?ref=Feature"
+  bucket_name             = var.bucket_name
+  aliases                 = var.aliases
+  force_destroy           = var.force_destroy
+  ssl_certificate_arn     = var.ssl_certificate_arn
+  allowed_ips             = var.allowed_ips
+ env = var.env
+ owner = var.owner
+ app = var.app
+  web_acl_id              = var.web_acl_id
+  refer_secret            = var.refer_secret
+  cloudfront_price_class  = var.cloudfront_price_class
+  index_document          = var.index_document
+  error_document          = var.error_document
+  error_response_code     = var.error_response_code
+  spa_error_response_code = var.spa_error_response_code
+  lambda_edge_enabled     = var.lambda_edge_enabled
+  cf_ipv6_enabled         = var.cf_ipv6_enabled
+  single_page_application = var.single_page_application
+}
